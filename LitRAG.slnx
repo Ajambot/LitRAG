@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LitRAG.Api/LitRAG.Api.csproj" />
+    <Project Path="src/LitRAG.Core/LitRAG.Core.csproj" />
+  </Folder>
+</Solution>
