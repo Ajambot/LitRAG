@@ -32,8 +32,9 @@ public class PDFMgr
 				buf.Add(word);
 				if (buf.Count == chunkSize)
 				{
-					chunks.Add(string.Join(" ", buf.ToList()));
-					buf.RemoveRange(0, chunkSize - overlap);
+					chunks.Add(string.Join(" ", buf[..(FindLastSentence(buf) + 1)].Select(w => w.Text)));
+					buf.RemoveRange(0, Math.Max(FindLastSentence(buf) - overlap + 1, 0));
+					buf.RemoveRange(0, FindFirstSentence(buf) + 1);
 				}
 			}
 		}
@@ -43,5 +44,33 @@ public class PDFMgr
 			chunks.Add(string.Join(" ", buf.ToList()));
 		}
 		return chunks;
+	}
+
+	private static int FindLastSentence(List<Word> buf)
+	{
+		for (int i = buf.Count - 1; i >= 0; i--)
+		{
+			string curWord = buf[i].Text;
+			switch (curWord[curWord.Length - 1])
+			{
+				case '.' or '?' or '!':
+					return i;
+			}
+		}
+		return buf.Count - 1;
+	}
+
+	private static int FindFirstSentence(List<Word> buf)
+	{
+		for (int i = 0; i < buf.Count; i++)
+		{
+			string curWord = buf[i].ToString();
+			switch (curWord[curWord.Length - 1])
+			{
+				case '.' or '?' or '!':
+					return i;
+			}
+		}
+		return buf.Count - 1;
 	}
 }
