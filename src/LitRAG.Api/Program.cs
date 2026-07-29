@@ -1,8 +1,17 @@
 using LitRAG.Core;
 using UglyToad.PdfPig.Content;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
+
+
+app.MapPost("/parse", async ([FromBody] string PDFText) =>
+{
+    var parser = new SectionParserAgent();
+    var parsedSections = await parser.ParseSections(PDFText);
+    return Results.Ok(parsedSections);
+});
 
 app.MapGet("/pdf", () =>
 {
@@ -13,12 +22,13 @@ app.MapGet("/pdf", () =>
         return Results.NotFound($"File not found: {path}");
 
     List<IEnumerable<Word>> pages = PDFMgr.ReadPdf(path);
-    List<string> resp = [];
-    foreach (IEnumerable<Word> page in pages)
-    {
-        resp.Add(string.Join(" ", page.Take(500)));
-    }
-    return Results.Ok(resp);
+    return Results.Ok(string.Join(" ", pages.ElementAt(1).TakeWhile(w => true)));
+    ///List<string> resp = [];
+    ///foreach (IEnumerable<Word> page in pages)
+    ///{
+    ///    resp.Add(string.Join(" ", page.Take(500)));
+    ///}
+    ///return Results.Ok(resp);
 });
 
 app.MapGet("/chunk", () =>
