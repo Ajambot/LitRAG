@@ -1,6 +1,8 @@
 using LitRAG.Core;
 using UglyToad.PdfPig.Content;
 using Microsoft.AspNetCore.Mvc;
+using UglyToad.PdfPig;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
@@ -31,7 +33,7 @@ app.MapGet("/pdf", () =>
     ///return Results.Ok(resp);
 });
 
-app.MapGet("/chunk", () =>
+app.MapGet("/chunk", async () =>
 {
     string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers/Kalantari 2023 Understanding-the-Language-of-ADHD-and-Autism-Communities-on-Social-Media.pdf");
@@ -39,18 +41,30 @@ app.MapGet("/chunk", () =>
     if (!File.Exists(path))
         return Results.NotFound($"File not found: {path}");
 
-    return Results.Ok(PDFMgr.ChunkPdf(path, 350, 50));
-});
+    using var document = PdfDocument.Open(path);
+    var sb = new StringBuilder();
 
-app.MapGet("/chunk-by-section", () =>
-{
-    string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers/Kalantari 2023 Understanding-the-Language-of-ADHD-and-Autism-Communities-on-Social-Media.pdf");
+    foreach (var page in document.GetPages())
+    {
+        sb.AppendLine(page.Text);
+    }
 
-    if (!File.Exists(path))
-        return Results.NotFound($"File not found: {path}");
+    string allText = sb.ToString();
 
-    return Results.Ok(PDFMgr.ChunkPdfBySections(path, 350, 50));
+
+    var parser = new SectionParserAgent();
+    var parsedSections = await parser.ParseSections(allText);
+
+    List<string> chunks = [];
+    foreach (var (section, text) in parsedSections)
+    {
+        List<string> words = text
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+        List<string> sectionChunks = PDFMgr.ChunkWords(words, 350, 50);
+        chunks.AddRange(sectionChunks);
+    }
+    return Results.Ok(chunks);
 });
 
 app.Run();

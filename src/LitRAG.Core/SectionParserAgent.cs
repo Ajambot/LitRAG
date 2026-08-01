@@ -4,6 +4,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using System.ClientModel;
 using OpenAI;
+using System.Text.Json;
 
 public sealed class SectionParserAgent
 {
@@ -47,13 +48,20 @@ public sealed class SectionParserAgent
 				name: "Parser");
 	}
 
-	public async Task<AgentResponse> ParseSections(string rawText)
+	public async Task<Dictionary<string, string>> ParseSections(string rawText)
 	{
 		var response = await agent.RunAsync(
 				$$"""
 				Raw extracted text:
 				{{rawText}}
 				""");
-		return response;
+
+		string rawJson = response.Text;
+
+		rawJson = rawJson.Trim().Trim('`').Replace("json\n", "", StringComparison.OrdinalIgnoreCase);
+
+		var sections = JsonSerializer.Deserialize<Dictionary<string, string>>(rawJson);
+
+		return sections;
 	}
 }
