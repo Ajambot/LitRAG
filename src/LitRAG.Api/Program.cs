@@ -4,9 +4,21 @@ using Microsoft.AspNetCore.Mvc;
 using UglyToad.PdfPig;
 using System.Text;
 
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
+app.MapGet("/vectordb", async () =>
+{
+    var vdb = new VectorDB();
+
+    await vdb.CreateCollection();
+    var embeddingsModel = new EmbeddingsModel();
+    string text = "Hello World";
+    var embedding = await embeddingsModel.GenerateEmbeddings(text);
+    await vdb.InsertPoint(embedding.Vector.ToArray(), text);
+    return Results.Ok();
+});
 
 app.MapPost("/parse", async ([FromBody] string PDFText) =>
 {

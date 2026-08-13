@@ -40,7 +40,7 @@ public sealed class SectionParserAgent
 
 		var APIKey = new ApiKeyCredential("<your_api_key>");
 		OpenAIClient OAIClient = new OpenAIClient(APIKey, options);
-		var client = OAIClient.GetChatClient("qwen/qwen3.5-9b").AsIChatClient();
+		var client = OAIClient.GetChatClient("lmstudio-community/Qwen3.5-4B-GGUF").AsIChatClient();
 
 
 		agent = client.AsAIAgent(
