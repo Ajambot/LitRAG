@@ -3,14 +3,9 @@ namespace LitRAG.Core;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
-public sealed class VectorDB
+public sealed class VectorDB(string host, int port)
 {
-	private QdrantClient client;
-
-	public VectorDB()
-	{
-		client = new QdrantClient("127.0.0.1", 6334);
-	}
+	private readonly QdrantClient client = new(host, port);
 
 	async public Task CreateCollection()
 	{

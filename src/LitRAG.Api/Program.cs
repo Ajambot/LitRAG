@@ -6,15 +6,25 @@ using System.Text;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var host = config["Qdrant:Host"] ?? "localhost";
+    var port = config.GetValue("Qdrant:Port", 6334);
+    return new VectorDB(host, port);
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    return new EmbeddingsModel();
+});
+
 var app = builder.Build();
 
-app.MapGet("/vectordb", async () =>
+app.MapPost("/vectordb", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] string text) =>
 {
-    var vdb = new VectorDB();
-
     await vdb.CreateCollection();
-    var embeddingsModel = new EmbeddingsModel();
-    string text = "Hello World";
     var embedding = await embeddingsModel.GenerateEmbeddings(text);
     await vdb.InsertPoint(embedding.Vector.ToArray(), text);
     return Results.Ok();
@@ -45,10 +55,10 @@ app.MapGet("/pdf", () =>
     ///return Results.Ok(resp);
 });
 
-app.MapGet("/chunk", async () =>
+app.MapGet("/chunk", async (VectorDB vdb, EmbeddingsModel embeddingsModel) =>
 {
     string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers/Kalantari 2023 Understanding-the-Language-of-ADHD-and-Autism-Communities-on-Social-Media.pdf");
+    string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers/micro_research_paper.pdf");
 
     if (!File.Exists(path))
         return Results.NotFound($"File not found: {path}");
@@ -76,7 +86,15 @@ app.MapGet("/chunk", async () =>
         List<string> sectionChunks = PDFMgr.ChunkWords(words, 350, 50);
         chunks.AddRange(sectionChunks);
     }
-    return Results.Ok(chunks);
+
+    foreach (var chunk in chunks)
+    {
+        await vdb.CreateCollection();
+        var embedding = await embeddingsModel.GenerateEmbeddings(chunk);
+        await vdb.InsertPoint(embedding.Vector.ToArray(), chunk);
+    }
+
+    return Results.Ok();
 });
 
 app.Run();
