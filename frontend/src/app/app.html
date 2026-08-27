@@ -3,17 +3,22 @@
     <label for="chatbox" class="text-lg">Enter your question here</label>
     <textarea #chatbox (input)="0"
       class="block rounded-md w-4xl border mx-auto my-4 border-slate-300 bg-white px-3 py-2 text-lg placeholder-slate-400 text-slate-900 shadow-sm outline-none transition duration-200 ease-in-out hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 field-sizing-content max-h-96 overflow-y-auto resize-none"
-      id="chatbox"
-      placeholder="What was the percentage reduction in eye strain for pause intervention?">Hello</textarea>
+      id="chatbox" placeholder="What was the percentage reduction in eye strain for pause intervention?"></textarea>
     <div class="w-full">
       <button (click)="chatbox.value=''"
         class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Clear</button>
-      <button (click)="onSendClick()" [disabled]="!chatbox.value.trim().length"
+      <button (click)="onSendClick(chatbox.value)" [disabled]="!chatbox.value.trim().length"
         [class.opacity-50]="!chatbox.value.trim().length"
         class="cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Send
         Message</button>
     </div>
   </div>
+  <ul>
+    @for (match of matches(); track match.text) {
+    <li>Text: {{ match.text }}</li>
+    <li>Score: {{ match.score }}</li>
+    }
+  </ul>
 </main>
 
 <router-outlet />

@@ -20,14 +20,38 @@ builder.Services.AddSingleton(sp =>
     return new EmbeddingsModel();
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
-app.MapPost("/vectordb", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] string text) =>
+app.UseCors("AllowFrontend");
+
+app.MapPost("/vectordb/insert", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] string text) =>
 {
-    await vdb.CreateCollection();
+    await vdb.EnsureCreated();
     var embedding = await embeddingsModel.GenerateEmbeddings(text);
     await vdb.InsertPoint(embedding.Vector.ToArray(), text);
     return Results.Ok();
+});
+
+
+app.MapPost("/vectordb/query", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest request) =>
+{
+    if (!await vdb.IsCreated())
+    {
+        return Results.NotFound("Vector database has not been created");
+    }
+    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(request.Query);
+    List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
+    return Results.Ok(matches);
 });
 
 app.MapPost("/parse", async ([FromBody] string PDFText) =>
@@ -89,7 +113,7 @@ app.MapGet("/chunk", async (VectorDB vdb, EmbeddingsModel embeddingsModel) =>
 
     foreach (var chunk in chunks)
     {
-        await vdb.CreateCollection();
+        await vdb.EnsureCreated();
         var embedding = await embeddingsModel.GenerateEmbeddings(chunk);
         await vdb.InsertPoint(embedding.Vector.ToArray(), chunk);
     }
