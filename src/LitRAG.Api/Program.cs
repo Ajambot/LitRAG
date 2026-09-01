@@ -54,6 +54,18 @@ app.MapPost("/vectordb/query", async (VectorDB vdb, EmbeddingsModel embeddingsMo
     return Results.Ok(matches);
 });
 
+app.MapPost("/chat", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest question) =>
+{
+    if (!await vdb.IsCreated())
+    {
+        return Results.InternalServerError("Vector database has not been created");
+    }
+    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(question.Query);
+    List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
+    var chatAgent = new ChatAgent();
+    return Results.Ok(await chatAgent.Ask(question.Query, matches.Select(x => x.Text)));
+});
+
 app.MapPost("/parse", async ([FromBody] string PDFText) =>
 {
     var parser = new SectionParserAgent();
