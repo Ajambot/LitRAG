@@ -1,8 +1,10 @@
 namespace LitRAG.Core;
 
+#pragma warning disable OPENAI001 // Responses API is experimental in OpenAI SDK v2
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using OpenAI;
 using System.Text.Json;
 
@@ -18,21 +20,25 @@ public sealed class ChatAgent
 		state that the answer can not be determined using the provided literature.
 		""";
 
-	public ChatAgent()
+	public ChatAgent(string? model = null)
 	{
+		model ??= Environment.GetEnvironmentVariable("OPENCODE_MODEL") ?? "muse-spark-1.3-contributor-free";
+
 		var options = new OpenAIClientOptions
 		{
-			Endpoint = new Uri("http://10.88.111.7:1234/v1")
+			Endpoint = new Uri("https://opencode.ai/zen/v1")
 		};
+		options.AddPolicy(OpenCodeSessionHeaderPolicy.Instance, PipelinePosition.PerCall);
 
-		var APIKey = new ApiKeyCredential("<your_api_key>");
-		OpenAIClient OAIClient = new OpenAIClient(APIKey, options);
-		var client = OAIClient.GetChatClient("lmstudio-community/Qwen3.5-4B-GGUF").AsIChatClient();
+		var apiKey = Environment.GetEnvironmentVariable("OPENCODE_KEY")
+			?? throw new InvalidOperationException("OPENCODE_KEY is not set. Add it to your .env file or environment.");
+		OpenAIClient OAIClient = new OpenAIClient(new ApiKeyCredential(apiKey), options);
+		var client = OAIClient.GetResponsesClient().AsIChatClient(model);
 
 
 		agent = client.AsAIAgent(
 				instructions: prompt,
-				name: "Parser");
+				name: "Chat Agent");
 	}
 
 	public async Task<string> Ask(string question, IEnumerable<string> excerpts)
