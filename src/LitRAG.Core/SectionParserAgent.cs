@@ -35,16 +35,16 @@ public sealed class SectionParserAgent
 
 	public SectionParserAgent(string? model = null)
 	{
-		model ??= Environment.GetEnvironmentVariable("OPENCODE_MODEL") ?? "muse-spark-1.3-contributor-free";
+		model ??= Environment.GetEnvironmentVariable("OPENROUTER_MODEL") ?? "muse-spark-1.3-contributor-free";
 
 		var options = new OpenAIClientOptions
 		{
-			Endpoint = new Uri("https://opencode.ai/zen/v1")
+			Endpoint = new Uri("https://openrouter.ai/api/v1/chat/completions")
 		};
 		options.AddPolicy(OpenCodeSessionHeaderPolicy.Instance, PipelinePosition.PerCall);
 
-		var apiKey = Environment.GetEnvironmentVariable("OPENCODE_KEY")
-			?? throw new InvalidOperationException("OPENCODE_KEY is not set. Add it to your .env file or environment.");
+		var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_KEY")
+			?? throw new InvalidOperationException("OPENROUTER_KEY is not set. Add it to your .env file or environment.");
 		OpenAIClient OAIClient = new OpenAIClient(new ApiKeyCredential(apiKey), options);
 		var client = OAIClient.GetResponsesClient().AsIChatClient(model);
 

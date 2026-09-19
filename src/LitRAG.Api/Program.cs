@@ -3,6 +3,7 @@ using UglyToad.PdfPig.Content;
 using Microsoft.AspNetCore.Mvc;
 using UglyToad.PdfPig;
 using System.Text;
+using Microsoft.Extensions.AI;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 DotNetEnv.Env.TraversePath().Load();
@@ -44,27 +45,43 @@ app.MapPost("/vectordb/insert", async (VectorDB vdb, EmbeddingsModel embeddingsM
 });
 
 
-app.MapPost("/vectordb/query", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest request) =>
-{
-    if (!await vdb.IsCreated())
-    {
-        return Results.NotFound("Vector database has not been created");
-    }
-    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(request.Query);
-    List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
-    return Results.Ok(matches);
-});
+//app.MapPost("/vectordb/query", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest request) =>
+//{
+//    if (!await vdb.IsCreated())
+//    {
+//        return Results.NotFound("Vector database has not been created");
+//    }
+//    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(request.Query);
+//    List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
+//    return Results.Ok(matches);
+//});
 
-app.MapPost("/chat", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest question) =>
+app.MapPost("/chat", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest request) =>
 {
     if (!await vdb.IsCreated())
     {
         return Results.InternalServerError("Vector database has not been created");
     }
-    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(question.Query);
+
+    ChatRole strToRole(string role)
+    {
+        switch (role)
+        {
+            case "user":
+                return ChatRole.User;
+            case "assistant":
+                return ChatRole.Assistant;
+            default:
+                break;
+        }
+        throw new Exception("Role does not exist");
+    }
+
+    IEnumerable<ChatMessage> conversation = request.Conversation.Select(msg => new ChatMessage(strToRole(msg.Role), msg.Text));
+    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(conversation.Last().Text);
     List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
     var chatAgent = new ChatAgent();
-    return Results.Ok(await chatAgent.Ask(question.Query, matches.Select(x => x.Text)));
+    return Results.Ok(await chatAgent.Ask(conversation, matches.Select(x => x.Text)));
 });
 
 app.MapPost("/parse", async ([FromBody] string PDFText) =>

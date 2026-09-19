@@ -8,6 +8,11 @@ interface Match {
   score: number;
 }
 
+interface Message {
+  Role: string;
+  Text: string;
+}
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
@@ -18,12 +23,13 @@ export class App {
   protected readonly title = signal('frontend');
   private http = inject(HttpClient);
   matches = signal<Match[]>([]);
-  response = signal<String>('');
+  msgs = signal<Message[]>([]);
 
   onSendClick(query: string): void {
-    this.answerQuestion(query).subscribe({
+    this.msgs.set([...this.msgs(), { Role: 'user', Text: query }]);
+    this.answerQuestion(this.msgs()).subscribe({
       next: (r) => {
-        this.response.set(r);
+        this.msgs.set([...this.msgs(), { Role: 'assistant', Text: r }]);
       },
     });
   }
@@ -32,7 +38,7 @@ export class App {
     return this.http.post<Match[]>('http://localhost:5278/vectordb/query', { query });
   }
 
-  answerQuestion(query: string): Observable<String> {
-    return this.http.post<String>('http://localhost:5278/chat', { query });
+  answerQuestion(query: Message[]): Observable<string> {
+    return this.http.post<string>('http://localhost:5278/chat', { Conversation: query });
   }
 }
