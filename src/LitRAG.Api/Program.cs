@@ -10,39 +10,39 @@ DotNetEnv.Env.TraversePath().Load();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-    var host = config["Qdrant:Host"] ?? "localhost";
-    var port = config.GetValue("Qdrant:Port", 6334);
-    return new VectorDB(host, port);
-});
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var host = config["Qdrant:Host"] ?? "localhost";
+            var port = config.GetValue("Qdrant:Port", 6334);
+            return new VectorDB(host, port);
+        });
 
 builder.Services.AddSingleton(sp =>
-{
-    return new EmbeddingsModel();
-});
+        {
+            return new EmbeddingsModel();
+        });
 
 builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+                    {
+                        policy.AllowAnyOrigin()
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+                    });
+        });
 
 var app = builder.Build();
 
 app.UseCors("AllowFrontend");
 
 app.MapPost("/vectordb/insert", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] string text) =>
-{
-    await vdb.EnsureCreated();
-    var embedding = await embeddingsModel.GenerateEmbeddings(text);
-    await vdb.InsertPoint(embedding.Vector.ToArray(), text);
-    return Results.Ok();
-});
+        {
+            await vdb.EnsureCreated();
+            var embedding = await embeddingsModel.GenerateEmbeddings(text);
+            await vdb.InsertPoint(embedding.Vector.ToArray(), text);
+            return Results.Ok();
+        });
 
 
 //app.MapPost("/vectordb/query", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest request) =>
@@ -57,57 +57,71 @@ app.MapPost("/vectordb/insert", async (VectorDB vdb, EmbeddingsModel embeddingsM
 //});
 
 app.MapPost("/chat", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] QueryRequest request) =>
-{
-    if (!await vdb.IsCreated())
-    {
-        return Results.InternalServerError("Vector database has not been created");
-    }
-
-    ChatRole strToRole(string role)
-    {
-        switch (role)
         {
-            case "user":
-                return ChatRole.User;
-            case "assistant":
-                return ChatRole.Assistant;
-            default:
-                break;
-        }
-        throw new Exception("Role does not exist");
-    }
+            if (!await vdb.IsCreated())
+            {
+                return Results.InternalServerError("Vector database has not been created");
+            }
 
-    IEnumerable<ChatMessage> conversation = request.Conversation.Select(msg => new ChatMessage(strToRole(msg.Role), msg.Text));
-    var queryEmbedding = await embeddingsModel.GenerateEmbeddings(conversation.Last().Text);
-    List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
-    var chatAgent = new ChatAgent();
-    return Results.Ok(await chatAgent.Ask(conversation, matches.Select(x => x.Text)));
-});
+            ChatRole strToRole(string role)
+            {
+                switch (role)
+                {
+                    case "user":
+                        return ChatRole.User;
+                    case "assistant":
+                        return ChatRole.Assistant;
+                    default:
+                        break;
+                }
+                throw new Exception("Role does not exist");
+            }
+
+            IEnumerable<ChatMessage> conversation = request.Conversation.Select(msg => new ChatMessage(strToRole(msg.Role), msg.Text));
+            var queryEmbedding = await embeddingsModel.GenerateEmbeddings(conversation.Last().Text);
+            List<QueryMatch> matches = await vdb.Query(queryEmbedding.Vector.ToArray());
+            var chatAgent = new ChatAgent();
+            return Results.Ok(await chatAgent.Ask(conversation, matches.Select(x => x.Text)));
+        });
 
 app.MapPost("/parse", async ([FromBody] string PDFText) =>
-{
-    var parser = new SectionParserAgent();
-    var parsedSections = await parser.ParseSections(PDFText);
-    return Results.Ok(parsedSections);
-});
+        {
+            var parser = new SectionParserAgent();
+            var parsedSections = await parser.ParseSections(PDFText);
+            return Results.Ok(parsedSections);
+        });
 
 app.MapGet("/pdf", () =>
+        {
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers/Kalantari 2023 Understanding-the-Language-of-ADHD-and-Autism-Communities-on-Social-Media.pdf");
+
+            if (!File.Exists(path))
+                return Results.NotFound($"File not found: {path}");
+
+            List<IEnumerable<Word>> pages = PDFMgr.ReadPdf(path);
+            return Results.Ok(string.Join(" ", pages.ElementAt(1).TakeWhile(w => true)));
+            ///List<string> resp = [];
+            ///foreach (IEnumerable<Word> page in pages)
+            ///{
+            ///    resp.Add(string.Join(" ", page.Take(500)));
+            ///}
+            ///return Results.Ok(resp);
+        });
+
+app.MapPost("/research-article", async (IFormFile file) =>
 {
-    string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers/Kalantari 2023 Understanding-the-Language-of-ADHD-and-Autism-Communities-on-Social-Media.pdf");
+    var saveDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "research-docs"));
 
-    if (!File.Exists(path))
-        return Results.NotFound($"File not found: {path}");
+    var safeName = Path.GetFileName(file.FileName);
+    var destPath = Path.Combine(saveDir, safeName);
 
-    List<IEnumerable<Word>> pages = PDFMgr.ReadPdf(path);
-    return Results.Ok(string.Join(" ", pages.ElementAt(1).TakeWhile(w => true)));
-    ///List<string> resp = [];
-    ///foreach (IEnumerable<Word> page in pages)
-    ///{
-    ///    resp.Add(string.Join(" ", page.Take(500)));
-    ///}
-    ///return Results.Ok(resp);
-});
+    await using var dest = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+    await file.CopyToAsync(dest);
+
+    return Results.Created();
+}
+).DisableAntiforgery();
 
 app.MapGet("/chunk", async (VectorDB vdb, EmbeddingsModel embeddingsModel) =>
 {

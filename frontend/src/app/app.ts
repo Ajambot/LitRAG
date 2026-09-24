@@ -25,6 +25,8 @@ export class App {
   matches = signal<Match[]>([]);
   msgs = signal<Message[]>([]);
 
+  selectedFile: File | null = null;
+
   onSendClick(query: string): void {
     this.msgs.set([...this.msgs(), { Role: 'user', Text: query }]);
     this.answerQuestion(this.msgs()).subscribe({
@@ -40,5 +42,32 @@ export class App {
 
   answerQuestion(query: Message[]): Observable<string> {
     return this.http.post<string>('http://localhost:5278/chat', { Conversation: query });
+  }
+
+  onFileSelect(event: Event) {
+    const element = event.target as HTMLInputElement;
+    if (element.files) this.selectedFile = element.files[0];
+  }
+
+  onSubmit(): void {
+    if (!this.selectedFile) {
+      alert('Please select a file first!');
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append('file', this.selectedFile, this.selectedFile.name);
+
+    const externalUrl = 'http://localhost:5278/research-article';
+
+    this.http.post(externalUrl, formData).subscribe({
+      next: (response) => {
+        alert('Upload complete:');
+      },
+      error: (error) => {
+        alert('Error in upload: ' + error);
+      },
+    });
   }
 }

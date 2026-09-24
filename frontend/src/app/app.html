@@ -20,6 +20,15 @@
         Message</button>
     </div>
   </div>
+
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    <div>
+      <label for="file">Choose File:</label>
+      <input type="file" id="file" (change)="onFileSelect($event)" />
+    </div>
+
+    <button type="submit" [disabled]="!selectedFile">Upload to External Server</button>
+  </form>
 </main>
 
 <router-outlet />
