@@ -16,19 +16,13 @@
         class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Clear</button>
       <button (click)="onSendClick(chatbox.value); chatbox.value=''" [disabled]="!chatbox.value.trim().length"
         [class.opacity-50]="!chatbox.value.trim().length"
-        class="cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Send
+        class="cursor-pointer px-5 py-2.5 mr-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Send
         Message</button>
+      <input class="sr-only" type="file" id="file" accept="application/pdf" (change)="onFileSelect($event); onSubmit()" />
+      <label for="file"
+        class="inline-block cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md focus:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400">{{"Files Imported: " + numFiles()}}</label>
     </div>
   </div>
-
-  <form (submit)="onSubmit(); $event.preventDefault()">
-    <div>
-      <label for="file">Choose File:</label>
-      <input type="file" id="file" (change)="onFileSelect($event)" />
-    </div>
-
-    <button type="submit" [disabled]="!selectedFile">Upload to External Server</button>
-  </form>
 </main>
 
 <router-outlet />

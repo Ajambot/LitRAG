@@ -91,6 +91,13 @@ app.MapPost("/parse", async ([FromBody] string PDFText) =>
             return Results.Ok(parsedSections);
         });
 
+app.MapGet("/files", () =>
+{
+    string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers");
+    return Results.Ok(Directory.EnumerateFiles(path, "*.pdf").Count());
+});
+
 app.MapGet("/pdf", () =>
         {
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

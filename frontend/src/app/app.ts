@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Observable } from 'rxjs';
 
@@ -19,13 +19,22 @@ interface Message {
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
+export class App implements OnInit {
   protected readonly title = signal('frontend');
   private http = inject(HttpClient);
   matches = signal<Match[]>([]);
   msgs = signal<Message[]>([]);
+  numFiles = signal<number>(0);
 
   selectedFile: File | null = null;
+
+  ngOnInit() {
+    this.getNumFiles().subscribe({
+      next: (r) => {
+        this.numFiles.set(r);
+      },
+    });
+  }
 
   onSendClick(query: string): void {
     this.msgs.set([...this.msgs(), { Role: 'user', Text: query }]);
@@ -42,6 +51,10 @@ export class App {
 
   answerQuestion(query: Message[]): Observable<string> {
     return this.http.post<string>('http://localhost:5278/chat', { Conversation: query });
+  }
+
+  getNumFiles(): Observable<number> {
+    return this.http.get<number>('http://localhost:5278/files');
   }
 
   onFileSelect(event: Event) {
@@ -67,6 +80,12 @@ export class App {
       },
       error: (error) => {
         alert('Error in upload: ' + error);
+      },
+    });
+
+    this.getNumFiles().subscribe({
+      next: (r) => {
+        this.numFiles.set(r);
       },
     });
   }
