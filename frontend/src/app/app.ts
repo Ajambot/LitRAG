@@ -23,7 +23,8 @@ export class App implements OnInit {
   protected readonly title = signal('frontend');
   private http = inject(HttpClient);
   matches = signal<Match[]>([]);
-  msgs = signal<Message[]>([]);
+  chats = signal<Message[][]>([[]]);
+  activeChat = signal<number>(0);
   numFiles = signal<number>(0);
 
   selectedFile: File | null = null;
@@ -36,11 +37,28 @@ export class App implements OnInit {
     });
   }
 
+  createChat() {
+    this.chats.set([...this.chats(), []]);
+  }
+
+  addMessageToChat(msg: string, role: string, idx: number) {
+    let chats = this.chats();
+    let curChat = chats[idx];
+    curChat = [...curChat, { Role: role, Text: msg }];
+    chats[idx] = curChat;
+    this.chats.set(chats);
+  }
+
+  selectChat(idx: number) {
+    this.activeChat.set(idx);
+  }
+
   onSendClick(query: string): void {
-    this.msgs.set([...this.msgs(), { Role: 'user', Text: query }]);
-    this.answerQuestion(this.msgs()).subscribe({
+    let actChat = this.activeChat();
+    this.addMessageToChat(query, 'user', actChat);
+    this.answerQuestion(this.chats()[actChat]).subscribe({
       next: (r) => {
-        this.msgs.set([...this.msgs(), { Role: 'assistant', Text: r }]);
+        this.addMessageToChat(r, 'assistant', actChat);
       },
     });
   }

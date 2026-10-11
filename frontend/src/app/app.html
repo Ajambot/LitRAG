@@ -1,6 +1,19 @@
 <main class="main min-h-dvh justify-center items-center">
+  <div class="w-fit mx-auto my-4">
+    @for (chat of chats(); track $index) {
+      <button (click)="selectChat($index)"
+      class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md"
+      [class.bg-blue-900] = "$index === activeChat()">
+        {{$index}}
+      </button>
+    }
+      <button (click)="createChat()"
+      class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">
+      +
+      </button>
+  </div>
   <div class="h-[85vh] mx-28 p-8 mt-4 rounded-md bg-gray-800">
-    @for (msg of msgs(); track msg) {
+    @for (msg of chats()[activeChat()]; track $index) {
     <div [class]="msg.Role=='user'? 'ml-auto bg-green-500': 'bg-blue-500'" class="w-5/12 p-2 my-4 rounded-md">
       {{msg.Text}}
     </div>
