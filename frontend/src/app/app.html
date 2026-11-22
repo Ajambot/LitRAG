@@ -1,80 +1,194 @@
-<main class="main min-h-dvh justify-center items-center">
-  <div class="w-fit mx-auto my-4">
-    @for (chat of chats(); track $index) {
-      <div class="inline-flex items-center mr-2 rounded-lg overflow-hidden shadow-md transition duration-200 hover:brightness-110"
-        [class.bg-blue-900]="$index === activeChat()"
-        [class.bg-blue-600]="$index !== activeChat()">
-        <button (click)="selectChat($index)"
-          class="cursor-pointer px-5 py-2.5 text-white font-medium">
-          {{$index}}
-        </button>
-        <button (click)="deleteChat($index)" [attr.aria-label]="'Delete chat ' + $index" title="Delete chat"
-          class="cursor-pointer px-2.5 py-2.5 text-white/70 hover:text-white hover:bg-red-600 transition duration-200 border-l border-white/20">
-          &times;
+<svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-logo" viewBox="0 0 24 24">
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" />
+    <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v15h4.5a2.5 2.5 0 0 1 2.5 2.5v-15Z" />
+    <path d="m16 7 .8 2.2L19 10l-2.2.8L16 13l-.8-2.2L13 10l2.2-.8L16 7Z" />
+  </symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-3.9-.9L3 21l1.9-5.1A8.5 8.5 0 1 1 21 11.5Z" /></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" /></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z" /><path d="m19 16 .6 1.6L21 18l-1.4.4L19 20l-.6-1.6L17 18l1.4-.4L19 16Z" /></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="m21.4 2.6-8.9 18.7-2.8-7.8L2 10.7l19.4-8.1Z" /><path d="M21.4 2.6 9.7 13.5" /></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4m0 4h.01" /></symbol>
+  <symbol id="i-panel-left" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></symbol>
+  <symbol id="i-panel-right" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16" /></symbol>
+</svg>
+
+<div class="shell">
+  <div class="scrim" [class.visible]="mobilePanel() !== 'none'" (click)="mobilePanel.set('none')"></div>
+
+  <aside class="sidebar sidebar-left" [class.open]="mobilePanel() === 'chats'" aria-label="Conversations">
+    <div class="brand">
+      <div class="brand-mark"><svg class="icon"><use href="#i-logo" /></svg></div>
+      <div class="brand-copy">
+        <strong>LitRAG</strong>
+        <span>Knowledge workspace</span>
+      </div>
+      <button class="icon-button mobile-close" (click)="mobilePanel.set('none')" aria-label="Close conversations">
+        <svg class="icon"><use href="#i-x" /></svg>
+      </button>
+    </div>
+
+    <button class="new-chat" (click)="createChat()">
+      <svg class="icon"><use href="#i-plus" /></svg>
+      <span>New conversation</span>
+    </button>
+
+    <div class="section-label">Conversations</div>
+    <nav class="chat-list" aria-label="Chat history">
+      @for (chat of chats(); track $index) {
+        <div class="chat-item" [class.active]="$index === activeChat()">
+          <button class="chat-select" (click)="selectChat($index)" [attr.aria-current]="$index === activeChat() ? 'true' : null">
+            <svg class="icon"><use href="#i-chat" /></svg>
+            <span class="chat-copy">
+              <span class="chat-title">{{ chatTitle(chat, $index) }}</span>
+              <span class="chat-preview">{{ chatPreview(chat) }}</span>
+            </span>
+          </button>
+          <button class="icon-button delete-chat" (click)="deleteChat($index)" [attr.aria-label]="'Delete chat ' + $index" title="Delete conversation">
+            <svg class="icon"><use href="#i-trash" /></svg>
+          </button>
+        </div>
+      }
+    </nav>
+
+    <div class="sidebar-foot"><span class="online-dot"></span> Running locally</div>
+  </aside>
+
+  <section class="conversation" aria-label="Conversation">
+    <header class="conversation-header">
+      <button class="icon-button mobile-toggle chats-toggle" (click)="mobilePanel.set('chats')" aria-label="Open conversations">
+        <svg class="icon"><use href="#i-panel-left" /></svg>
+      </button>
+      <div class="conversation-heading">
+        <h2>{{ chatTitle(chats()[activeChat()], activeChat()) }}</h2>
+        <p>Grounded answers from your document library</p>
+      </div>
+      <div class="header-right">
+        <span class="model-pill"><span class="online-dot"></span> Ready</span>
+        <button class="icon-button mobile-toggle files-toggle" (click)="mobilePanel.set('files')" aria-label="Open documents">
+          <svg class="icon"><use href="#i-panel-right" /></svg>
         </button>
       </div>
-    }
-      <button (click)="createChat()"
-      class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">
-      +
-      </button>
-  </div>
-  <div class="h-[85vh] mx-28 p-8 mt-4 rounded-md bg-gray-800">
-    @for (msg of chats()[activeChat()]; track $index) {
-    <div [class]="msg.Role=='user'? 'ml-auto bg-green-500': 'bg-blue-500'" class="w-5/12 p-2 my-4 rounded-md">
-      {{msg.Text}}
-    </div>
-    }
-  </div>
-  <div class="flex flex-col px-20 mt-4 mx-auto">
-    <label for="chatbox" class="text-lg">Enter your question here</label>
-    @if (!hasReadyFile()) {
-      <p class="text-slate-400">Import a file to start asking questions</p>
-    }
-    <textarea #chatbox (input)="0" [disabled]="!hasReadyFile()"
-      class="block rounded-md w-4xl border my-4 border-slate-300 bg-white px-3 py-2 text-lg placeholder-slate-400 text-slate-900 shadow-sm outline-none transition duration-200 ease-in-out hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 field-sizing-content max-h-96 overflow-y-auto resize-none"
-      id="chatbox" placeholder="What was the percentage reduction in eye strain for pause intervention?"></textarea>
-    <div class="w-full">
-      <button (click)="chatbox.value=''"
-        class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Clear</button>
-      <button (click)="onSendClick(chatbox.value); chatbox.value=''" [disabled]="!hasReadyFile() || !chatbox.value.trim().length"
-        [class.opacity-50]="!hasReadyFile() || !chatbox.value.trim().length"
-        class="cursor-pointer px-5 py-2.5 mr-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Send
-        Message</button>
-    </div>
-  </div>
-  <section class="mx-auto mt-6 w-fit max-w-4xl rounded-md bg-gray-800 p-6">
-    <div class="flex items-center justify-between gap-8 mb-4">
-      <h2 class="text-lg text-white">Imported Files ({{ files().length }})</h2>
-      <input class="sr-only" type="file" id="file" accept="application/pdf"
-        (change)="onFileSelect($event)" />
-      <label for="file"
-        class="cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">
-        + Add file
-      </label>
-    </div>
-    <ul class="space-y-2">
-      @for (file of files(); track file.name) {
-        <li class="flex items-center justify-between gap-4 rounded bg-gray-700 px-3 py-2 text-white">
-          <span class="truncate">{{ file.name }}</span>
-          <div class="flex items-center gap-3">
-            <span class="status-badge rounded px-2 py-0.5 text-xs font-medium" [attr.data-status]="file.status"
-              [class.bg-green-600]="file.status === 'Ready'"
-              [class.bg-yellow-600]="file.status === 'Queued' || file.status === 'Indexing'"
-              [class.bg-red-600]="file.status === 'Failed'">{{ file.status }}</span>
-            @if (isTerminal(file.status)) {
-              <button (click)="deleteFile(file.name)" [attr.aria-label]="'Delete file ' + file.name" title="Delete file"
-                class="cursor-pointer px-2.5 text-white/70 hover:text-white hover:bg-red-600 rounded transition duration-200">
-                &times;
-              </button>
-            }
+    </header>
+
+    <div class="message-scroll" #messageScroll>
+      <div class="message-inner">
+        @if (currentMessages().length === 0 && !isSending()) {
+          <div class="empty-state">
+            <div class="empty-icon"><svg class="icon"><use href="#i-sparkle" /></svg></div>
+            <h3>Ask your documents anything</h3>
+            <p>LitRAG searches the papers in your library and answers with what they actually say.</p>
+            <div class="prompt-chips">
+              @for (prompt of suggestions; track prompt) {
+                <button class="prompt-chip" [disabled]="!hasReadyFile()" (click)="usePrompt(prompt)">{{ prompt }}</button>
+              }
+            </div>
           </div>
+        } @else {
+          @for (msg of currentMessages(); track $index) {
+            <div class="message-row" [class.mine]="msg.Role === 'user'">
+              @if (msg.Role !== 'user') {
+                <div class="assistant-avatar"><svg class="icon"><use href="#i-logo" /></svg></div>
+              }
+              <div class="message-bubble">{{ msg.Text }}</div>
+            </div>
+          }
+        }
+
+        @if (sendingChat() === activeChat()) {
+          <div class="message-row">
+            <div class="assistant-avatar"><svg class="icon"><use href="#i-logo" /></svg></div>
+            <div class="message-bubble typing" role="status" aria-label="LitRAG is thinking">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </div>
+          </div>
+        }
+
+        @if (chatError()?.chat === activeChat()) {
+          <div class="error-note">
+            <svg class="icon"><use href="#i-alert" /></svg>
+            <span>{{ chatError()?.message }}</span>
+            <button class="icon-button" (click)="dismissError()" aria-label="Dismiss error">
+              <svg class="icon"><use href="#i-x" /></svg>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="composer-area">
+      <div class="composer-inner">
+        @if (!hasReadyFile()) {
+          <p class="composer-hint"><svg class="icon"><use href="#i-alert" /></svg> Import a file to start asking questions</p>
+        }
+        <div class="composer" [class.disabled]="!hasReadyFile()">
+          <textarea #chatbox id="chatbox" rows="1" [disabled]="!hasReadyFile()" (input)="0" (keydown)="onChatKeydown($event)"
+            placeholder="Ask a question about your documents…" aria-label="Message LitRAG"></textarea>
+          <div class="composer-actions">
+            <button class="btn-ghost" (click)="clearChatbox()">Clear</button>
+            <button class="btn-primary" (click)="sendMessage()"
+              [disabled]="!hasReadyFile() || !chatbox.value.trim().length || isSending()">
+              @if (isSending()) {
+                <span class="spinner" aria-hidden="true"></span>
+              } @else {
+                <svg class="icon"><use href="#i-send" /></svg>
+              }
+              <span>{{ isSending() ? 'Thinking' : 'Send message' }}</span>
+            </button>
+          </div>
+        </div>
+        <p class="composer-meta">Enter to send · Shift + Enter for a new line</p>
+      </div>
+    </div>
+  </section>
+
+  <aside class="sidebar sidebar-right" [class.open]="mobilePanel() === 'files'" aria-label="Document library">
+    <header class="panel-head">
+      <div>
+        <h2>Documents</h2>
+        <p>{{ files().length }} {{ files().length === 1 ? 'file' : 'files' }} in library</p>
+      </div>
+      <button class="icon-button mobile-close" (click)="mobilePanel.set('none')" aria-label="Close documents">
+        <svg class="icon"><use href="#i-x" /></svg>
+      </button>
+    </header>
+
+    <input class="sr-only" type="file" id="file" accept="application/pdf" (change)="onFileSelect($event)" />
+    <label for="file" class="upload-button"><svg class="icon"><use href="#i-upload" /></svg> Add documents</label>
+
+    <div class="drop-zone" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+      <svg class="icon"><use href="#i-doc" /></svg>
+      <span>Drop a PDF here to index it</span>
+    </div>
+
+    <div class="file-section-label">Indexed sources</div>
+    <ul class="file-list">
+      @for (file of files(); track file.name) {
+        <li class="file-item">
+          <div class="file-glyph"><svg class="icon"><use href="#i-doc" /></svg></div>
+          <div class="file-copy">
+            <span class="file-name" [title]="file.name">{{ file.name }}</span>
+            <span class="status-badge" [attr.data-status]="file.status">{{ file.status }}</span>
+          </div>
+          @if (isTerminal(file.status)) {
+            <button class="icon-button delete-file" (click)="deleteFile(file.name)"
+              [attr.aria-label]="'Delete file ' + file.name" title="Delete file">
+              <svg class="icon"><use href="#i-x" /></svg>
+            </button>
+          }
         </li>
       } @empty {
-        <li class="text-slate-400">No files imported yet.</li>
+        <li class="empty-files">
+          <svg class="icon"><use href="#i-doc" /></svg>
+          <span>No files imported yet.</span>
+        </li>
       }
     </ul>
-  </section>
-</main>
+  </aside>
+</div>
 
 <router-outlet />
