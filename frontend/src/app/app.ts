@@ -1,16 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Observable } from 'rxjs';
+import { loadChatState, Message, saveChatState } from './chat-storage';
 
 interface Match {
   text: string;
   score: number;
-}
-
-interface Message {
-  Role: string;
-  Text: string;
 }
 
 @Component({
@@ -28,6 +24,13 @@ export class App implements OnInit {
   numFiles = signal<number>(0);
 
   selectedFile: File | null = null;
+
+  constructor() {
+    const state = loadChatState();
+    this.chats.set(state.chats);
+    this.activeChat.set(state.activeChat);
+    effect(() => saveChatState({ chats: this.chats(), activeChat: this.activeChat() }));
+  }
 
   ngOnInit() {
     this.getNumFiles().subscribe({
