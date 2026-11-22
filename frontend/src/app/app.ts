@@ -44,6 +44,24 @@ export class App implements OnInit {
     this.chats.set([...this.chats(), []]);
   }
 
+  deleteChat(idx: number) {
+    if (!confirm(`Delete chat ${idx}? This cannot be undone.`)) return;
+
+    const chats = this.chats().filter((_, i) => i !== idx);
+    if (chats.length === 0) {
+      this.chats.set([[]]);
+      this.activeChat.set(0);
+      return;
+    }
+
+    let activeChat = this.activeChat();
+    if (idx < activeChat) activeChat--;
+    else if (idx === activeChat) activeChat = Math.min(activeChat, chats.length - 1);
+
+    this.chats.set(chats);
+    this.activeChat.set(activeChat);
+  }
+
   addMessageToChat(msg: string, role: string, idx: number) {
     let chats = this.chats();
     let curChat = chats[idx];

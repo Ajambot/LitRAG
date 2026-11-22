@@ -1,11 +1,18 @@
 <main class="main min-h-dvh justify-center items-center">
   <div class="w-fit mx-auto my-4">
     @for (chat of chats(); track $index) {
-      <button (click)="selectChat($index)"
-      class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md"
-      [class.bg-blue-900] = "$index === activeChat()">
-        {{$index}}
-      </button>
+      <div class="inline-flex items-center mr-2 rounded-lg overflow-hidden shadow-md transition duration-200 hover:brightness-110"
+        [class.bg-blue-900]="$index === activeChat()"
+        [class.bg-blue-600]="$index !== activeChat()">
+        <button (click)="selectChat($index)"
+          class="cursor-pointer px-5 py-2.5 text-white font-medium">
+          {{$index}}
+        </button>
+        <button (click)="deleteChat($index)" [attr.aria-label]="'Delete chat ' + $index" title="Delete chat"
+          class="cursor-pointer px-2.5 py-2.5 text-white/70 hover:text-white hover:bg-red-600 transition duration-200 border-l border-white/20">
+          &times;
+        </button>
+      </div>
     }
       <button (click)="createChat()"
       class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">
