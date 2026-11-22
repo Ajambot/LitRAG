@@ -38,11 +38,32 @@
         [class.opacity-50]="!chatbox.value.trim().length"
         class="cursor-pointer px-5 py-2.5 mr-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Send
         Message</button>
-      <input class="sr-only" type="file" id="file" accept="application/pdf" (change)="onFileSelect($event); onSubmit()" />
-      <label for="file"
-        class="inline-block cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md focus:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400">{{"Files Imported: " + numFiles()}}</label>
     </div>
   </div>
+  <section class="mx-auto mt-6 w-fit max-w-4xl rounded-md bg-gray-800 p-6">
+    <div class="flex items-center justify-between gap-8 mb-4">
+      <h2 class="text-lg text-white">Imported Files ({{ files().length }})</h2>
+      <input class="sr-only" type="file" id="file" accept="application/pdf"
+        (change)="onFileSelect($event); onSubmit()" />
+      <label for="file"
+        class="cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">
+        + Add file
+      </label>
+    </div>
+    <ul class="space-y-2">
+      @for (file of files(); track file) {
+        <li class="flex items-center justify-between gap-4 rounded bg-gray-700 px-3 py-2 text-white">
+          <span class="truncate">{{ file }}</span>
+          <button (click)="deleteFile(file)" [attr.aria-label]="'Delete file ' + file" title="Delete file"
+            class="cursor-pointer px-2.5 text-white/70 hover:text-white hover:bg-red-600 rounded transition duration-200">
+            &times;
+          </button>
+        </li>
+      } @empty {
+        <li class="text-slate-400">No files imported yet.</li>
+      }
+    </ul>
+  </section>
 </main>
 
 <router-outlet />

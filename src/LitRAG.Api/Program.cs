@@ -36,6 +36,9 @@ var app = builder.Build();
 
 app.UseCors("AllowFrontend");
 
+string researchDocsDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "research-docs"));
+Directory.CreateDirectory(researchDocsDir);
+
 app.MapPost("/vectordb/insert", async (VectorDB vdb, EmbeddingsModel embeddingsModel, [FromBody] string text) =>
         {
             await vdb.EnsureCreated();
@@ -93,9 +96,28 @@ app.MapPost("/parse", async ([FromBody] string PDFText) =>
 
 app.MapGet("/files", () =>
 {
-    string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    string path = Path.Combine(home, "Personal/LitRAG/src/LitRAG.Core/Sample Papers");
-    return Results.Ok(Directory.EnumerateFiles(path, "*.pdf").Count());
+    var files = Directory.EnumerateFiles(researchDocsDir, "*.pdf")
+        .Select(Path.GetFileName)
+        .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    return Results.Ok(files);
+});
+
+app.MapDelete("/files/{fileName}", (string fileName) =>
+{
+    var safeName = Path.GetFileName(fileName);
+    if (string.IsNullOrEmpty(safeName) || safeName != fileName)
+        return Results.BadRequest("Invalid file name");
+
+    var destPath = Path.GetFullPath(Path.Combine(researchDocsDir, safeName));
+    if (!destPath.StartsWith(researchDocsDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest("Invalid file name");
+
+    if (!File.Exists(destPath))
+        return Results.NotFound();
+
+    File.Delete(destPath);
+    return Results.NoContent();
 });
 
 app.MapGet("/pdf", () =>
@@ -118,10 +140,13 @@ app.MapGet("/pdf", () =>
 
 app.MapPost("/research-article", async (IFormFile file) =>
 {
-    var saveDir = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "research-docs"));
-
     var safeName = Path.GetFileName(file.FileName);
-    var destPath = Path.Combine(saveDir, safeName);
+    if (string.IsNullOrEmpty(safeName))
+        return Results.BadRequest("Invalid file name");
+
+    var destPath = Path.GetFullPath(Path.Combine(researchDocsDir, safeName));
+    if (!destPath.StartsWith(researchDocsDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest("Invalid file name");
 
     await using var dest = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
     await file.CopyToAsync(dest);

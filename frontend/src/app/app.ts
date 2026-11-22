@@ -21,7 +21,7 @@ export class App implements OnInit {
   matches = signal<Match[]>([]);
   chats = signal<Message[][]>([[]]);
   activeChat = signal<number>(0);
-  numFiles = signal<number>(0);
+  files = signal<string[]>([]);
 
   selectedFile: File | null = null;
 
@@ -33,11 +33,7 @@ export class App implements OnInit {
   }
 
   ngOnInit() {
-    this.getNumFiles().subscribe({
-      next: (r) => {
-        this.numFiles.set(r);
-      },
-    });
+    this.refreshFiles();
   }
 
   createChat() {
@@ -92,8 +88,25 @@ export class App implements OnInit {
     return this.http.post<string>('http://localhost:5278/chat', { Conversation: query });
   }
 
-  getNumFiles(): Observable<number> {
-    return this.http.get<number>('http://localhost:5278/files');
+  refreshFiles(): void {
+    this.getFiles().subscribe({
+      next: (r) => this.files.set(Array.isArray(r) ? r : []),
+      error: (error) => console.error('Error loading files: ' + error),
+    });
+  }
+
+  getFiles(): Observable<string[]> {
+    return this.http.get<string[]>('http://localhost:5278/files');
+  }
+
+  deleteFile(fileName: string): void {
+    if (!confirm(`Delete ${fileName}? This cannot be undone.`)) return;
+
+    const url = `http://localhost:5278/files/${encodeURIComponent(fileName)}`;
+    this.http.delete(url).subscribe({
+      next: () => this.refreshFiles(),
+      error: (error) => alert('Error deleting file: ' + error),
+    });
   }
 
   onFileSelect(event: Event) {
@@ -114,17 +127,12 @@ export class App implements OnInit {
     const externalUrl = 'http://localhost:5278/research-article';
 
     this.http.post(externalUrl, formData).subscribe({
-      next: (response) => {
-        alert('Upload complete:');
+      next: () => {
+        this.selectedFile = null;
+        this.refreshFiles();
       },
       error: (error) => {
         alert('Error in upload: ' + error);
-      },
-    });
-
-    this.getNumFiles().subscribe({
-      next: (r) => {
-        this.numFiles.set(r);
       },
     });
   }
