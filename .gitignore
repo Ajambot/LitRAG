@@ -34,4 +34,4 @@ msbuild.wrn
 .vs/
 vectordb/
 .env
-.local/
+specs/

@@ -28,14 +28,17 @@
   </div>
   <div class="flex flex-col px-20 mt-4 mx-auto">
     <label for="chatbox" class="text-lg">Enter your question here</label>
-    <textarea #chatbox (input)="0"
+    @if (!hasReadyFile()) {
+      <p class="text-slate-400">Import a file to start asking questions</p>
+    }
+    <textarea #chatbox (input)="0" [disabled]="!hasReadyFile()"
       class="block rounded-md w-4xl border my-4 border-slate-300 bg-white px-3 py-2 text-lg placeholder-slate-400 text-slate-900 shadow-sm outline-none transition duration-200 ease-in-out hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 field-sizing-content max-h-96 overflow-y-auto resize-none"
       id="chatbox" placeholder="What was the percentage reduction in eye strain for pause intervention?"></textarea>
     <div class="w-full">
       <button (click)="chatbox.value=''"
         class="cursor-pointer px-5 mr-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Clear</button>
-      <button (click)="onSendClick(chatbox.value); chatbox.value=''" [disabled]="!chatbox.value.trim().length"
-        [class.opacity-50]="!chatbox.value.trim().length"
+      <button (click)="onSendClick(chatbox.value); chatbox.value=''" [disabled]="!hasReadyFile() || !chatbox.value.trim().length"
+        [class.opacity-50]="!hasReadyFile() || !chatbox.value.trim().length"
         class="cursor-pointer px-5 py-2.5 mr-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">Send
         Message</button>
     </div>
@@ -44,20 +47,28 @@
     <div class="flex items-center justify-between gap-8 mb-4">
       <h2 class="text-lg text-white">Imported Files ({{ files().length }})</h2>
       <input class="sr-only" type="file" id="file" accept="application/pdf"
-        (change)="onFileSelect($event); onSubmit()" />
+        (change)="onFileSelect($event)" />
       <label for="file"
         class="cursor-pointer px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 shadow-md">
         + Add file
       </label>
     </div>
     <ul class="space-y-2">
-      @for (file of files(); track file) {
+      @for (file of files(); track file.name) {
         <li class="flex items-center justify-between gap-4 rounded bg-gray-700 px-3 py-2 text-white">
-          <span class="truncate">{{ file }}</span>
-          <button (click)="deleteFile(file)" [attr.aria-label]="'Delete file ' + file" title="Delete file"
-            class="cursor-pointer px-2.5 text-white/70 hover:text-white hover:bg-red-600 rounded transition duration-200">
-            &times;
-          </button>
+          <span class="truncate">{{ file.name }}</span>
+          <div class="flex items-center gap-3">
+            <span class="status-badge rounded px-2 py-0.5 text-xs font-medium" [attr.data-status]="file.status"
+              [class.bg-green-600]="file.status === 'Ready'"
+              [class.bg-yellow-600]="file.status === 'Queued' || file.status === 'Indexing'"
+              [class.bg-red-600]="file.status === 'Failed'">{{ file.status }}</span>
+            @if (isTerminal(file.status)) {
+              <button (click)="deleteFile(file.name)" [attr.aria-label]="'Delete file ' + file.name" title="Delete file"
+                class="cursor-pointer px-2.5 text-white/70 hover:text-white hover:bg-red-600 rounded transition duration-200">
+                &times;
+              </button>
+            }
+          </div>
         </li>
       } @empty {
         <li class="text-slate-400">No files imported yet.</li>

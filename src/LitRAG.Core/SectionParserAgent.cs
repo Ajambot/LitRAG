@@ -39,14 +39,14 @@ public sealed class SectionParserAgent
 
 		var options = new OpenAIClientOptions
 		{
-			Endpoint = new Uri("https://openrouter.ai/api/v1/chat/completions")
+			Endpoint = new Uri("https://openrouter.ai/api/v1")
 		};
 		options.AddPolicy(OpenCodeSessionHeaderPolicy.Instance, PipelinePosition.PerCall);
 
 		var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_KEY")
 			?? throw new InvalidOperationException("OPENROUTER_KEY is not set. Add it to your .env file or environment.");
 		OpenAIClient OAIClient = new OpenAIClient(new ApiKeyCredential(apiKey), options);
-		var client = OAIClient.GetResponsesClient().AsIChatClient(model);
+		var client = OAIClient.GetChatClient(model).AsIChatClient();
 
 
 		agent = client.AsAIAgent(

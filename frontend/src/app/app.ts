@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Observable } from 'rxjs';
 import { loadChatState, Message, saveChatState } from './chat-storage';
@@ -9,21 +9,29 @@ interface Match {
   score: number;
 }
 
+export interface ImportedFile {
+  name: string;
+  status: string;
+  error?: string;
+}
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   protected readonly title = signal('frontend');
   private http = inject(HttpClient);
   matches = signal<Match[]>([]);
   chats = signal<Message[][]>([[]]);
   activeChat = signal<number>(0);
-  files = signal<string[]>([]);
+  files = signal<ImportedFile[]>([]);
+  pollIntervalMs = 1000;
 
   selectedFile: File | null = null;
+  private pollTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     const state = loadChatState();
@@ -34,6 +42,18 @@ export class App implements OnInit {
 
   ngOnInit() {
     this.refreshFiles();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  isTerminal(status: string): boolean {
+    return status === 'Ready' || status === 'Failed';
+  }
+
+  hasReadyFile(): boolean {
+    return this.files().some(file => file.status === 'Ready');
   }
 
   createChat() {
@@ -90,13 +110,30 @@ export class App implements OnInit {
 
   refreshFiles(): void {
     this.getFiles().subscribe({
-      next: (r) => this.files.set(Array.isArray(r) ? r : []),
+      next: (r) => {
+        this.files.set(Array.isArray(r) ? r : []);
+        this.schedulePolling();
+      },
       error: (error) => console.error('Error loading files: ' + error),
     });
   }
 
-  getFiles(): Observable<string[]> {
-    return this.http.get<string[]>('http://localhost:5278/files');
+  getFiles(): Observable<ImportedFile[]> {
+    return this.http.get<ImportedFile[]>('http://localhost:5278/files');
+  }
+
+  private schedulePolling(): void {
+    this.stopPolling();
+    if (this.files().some(file => !this.isTerminal(file.status))) {
+      this.pollTimer = setTimeout(() => this.refreshFiles(), this.pollIntervalMs);
+    }
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer !== undefined) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = undefined;
+    }
   }
 
   deleteFile(fileName: string): void {
@@ -109,9 +146,26 @@ export class App implements OnInit {
     });
   }
 
-  onFileSelect(event: Event) {
+  onFileSelect(event: Event): void {
     const element = event.target as HTMLInputElement;
-    if (element.files) this.selectedFile = element.files[0];
+    const file = element.files?.[0] ?? null;
+    element.value = '';
+    this.selectedFile = null;
+
+    if (file) {
+      const existing = this.files().find(imported => imported.name === file.name);
+      if (existing && !this.isTerminal(existing.status)) {
+        alert(`${file.name} is still being indexed. Please wait until it finishes.`);
+      } else if (
+        !existing ||
+        confirm(`Replace ${file.name} and reindex it? Existing vectors will be replaced.`)
+      ) {
+        this.selectedFile = file;
+        this.onSubmit();
+      }
+    }
+
+    this.selectedFile = null;
   }
 
   onSubmit(): void {
@@ -121,12 +175,9 @@ export class App implements OnInit {
     }
 
     const formData = new FormData();
-
     formData.append('file', this.selectedFile, this.selectedFile.name);
 
-    const externalUrl = 'http://localhost:5278/research-article';
-
-    this.http.post(externalUrl, formData).subscribe({
+    this.http.post('http://localhost:5278/research-article', formData).subscribe({
       next: () => {
         this.selectedFile = null;
         this.refreshFiles();

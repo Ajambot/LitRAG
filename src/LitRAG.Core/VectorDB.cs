@@ -23,7 +23,7 @@ public sealed class VectorDB(string host, int port)
 		return await client.CollectionExistsAsync("papers");
 	}
 
-	async public Task InsertPoint(float[] embedding, string text)
+	async public Task InsertPoint(float[] embedding, string text, string importedFile)
 	{
 		var point = new PointStruct
 		{
@@ -32,10 +32,23 @@ public sealed class VectorDB(string host, int port)
 			Payload =
 			{
 				["text"] = text,
+				["importedFile"] = importedFile,
 			}
 		};
 
 		await client.UpsertAsync("papers", new List<PointStruct> { point });
+	}
+
+	async public Task DeleteByImportedFile(string importedFile)
+	{
+		if (!await IsCreated())
+		{
+			return;
+		}
+
+		var filter = new Filter();
+		filter.Must.Add(Conditions.MatchKeyword("importedFile", importedFile));
+		await client.DeleteAsync("papers", filter);
 	}
 
 	async public Task<List<QueryMatch>> Query(float[] queryVector)
